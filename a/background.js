@@ -1,3 +1,17 @@
+let filter_switch = true
+
+chrome.commands.onCommand.addListener(
+    command => {
+        if (command === 'filter-switch') {
+            if (filter_switch === true){
+                filter_switch = false
+            }else{
+                filter_switch = true
+            }
+        }
+    }
+)
+
 // 黑名单和白名单
 function DChecker(l){
     this.domain_list = l
@@ -110,7 +124,9 @@ Domain.prototype.ContentType = function (type) {
 
 chrome.webRequest.onBeforeSendHeaders.addListener(
     function (detail){
-        return js_blocker(detail, "js")
+        if (filter_switch === true){
+            return js_blocker(detail, "js")
+        }
     },
     { urls: ["<all_urls>"] },
     ["blocking", "extraHeaders", "requestHeaders"]
@@ -118,10 +134,12 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
 
 chrome.webRequest.onHeadersReceived.addListener(
     function (detail){
-        if (detail.type === "script"){
-            console.log(detail.url)
-            console.log(detail.type)
-            return js_blocker(detail, "script")
+        if (filter_switch === true){
+            if (detail.type === "script"){
+                console.log(detail.url)
+                console.log(detail.type)
+                return js_blocker(detail, "script")
+            }
         }
     },
     { urls: ["<all_urls>"] },

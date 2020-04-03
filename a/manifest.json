@@ -9,6 +9,15 @@
     "webRequest",
     "webRequestBlocking"
   ],
+  "commands": {
+    "filter-switch": {
+      "suggested_key": {
+        "default": "Ctrl+P",
+        "mac": "MacCtrl+P"
+      },
+      "description": "switch"
+    }
+  },
   "background": {
     "scripts": ["background.js"],
     "persistent": true
