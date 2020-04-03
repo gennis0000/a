@@ -8,8 +8,6 @@ DChecker.prototype.Check = function (domain) {
         let d = this.domain_list[i]
         if (domain.indexOf(d) >= 0){
             if( domain.indexOf(d) === domain.length-d.length){
-                //console.log(d)
-                //console.log(domain)
                 return true
             }
         }
@@ -112,21 +110,26 @@ Domain.prototype.ContentType = function (type) {
 
 chrome.webRequest.onBeforeSendHeaders.addListener(
     function (detail){
-        return js_blocker(detail)
+        return js_blocker(detail, "js")
     },
     { urls: ["<all_urls>"] },
     ["blocking", "extraHeaders", "requestHeaders"]
 )
 
-//chrome.webRequest.onHeadersReceived.addListener(
-//    function (detail){
-//    },
-//    { urls: ["<all_urls>"] },
-//    ["blocking", "extraHeaders", "responseHeaders"]
-//)
+chrome.webRequest.onHeadersReceived.addListener(
+    function (detail){
+        if (detail.type === "script"){
+            console.log(detail.url)
+            console.log(detail.type)
+            return js_blocker(detail, "script")
+        }
+    },
+    { urls: ["<all_urls>"] },
+    ["blocking", "extraHeaders", "responseHeaders"]
+)
 
 
-function js_blocker(detail){
+function js_blocker(detail, type){
     // 检查目标域名
     let td = new Domain(detail.url)
     if (td.valid === false){
@@ -156,6 +159,8 @@ function js_blocker(detail){
         if (referer === ""){
             console.log("no referer")
             console.log("initiator:" + detail.initiator)
+            console.log("header is: ")
+            console.log(detail.requestHeaders)
             return
         }
 
@@ -176,14 +181,28 @@ function js_blocker(detail){
         return
     }
 
-    if (td.ContentType("js") === true){
+    let ck = false
+    if (type === "js"){
+        if (td.ContentType("js") === true){
+            ck = true
+        }
+    }
+    if (type === "script"){
+        ck = true
+    }
+
+    if (ck === true){
         if (cd.GetDomain() === td.GetDomain()){
+            console.log("type: "+type)
             console.log("pass: "+cd.url+"   "+td.url)
             return
         }
+        console.log("type: "+type)
         console.log("block: "+td.url)
         return {cancel: true}
     }
+    console.log("type: "+type)
+    console.log("skip: "+td.url)
 }
 
 
