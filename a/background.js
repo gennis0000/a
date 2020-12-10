@@ -1,13 +1,21 @@
 let filter_switch = true
+let filter_only_list = true
 
 chrome.commands.onCommand.addListener(
     command => {
-        if (command === 'filter-switch') {
-            if (filter_switch === true){
-                filter_switch = false
-            }else{
-                filter_switch = true
-            }
+        switch (command) {
+            case 'filter-switch':
+                if (filter_switch === true){
+                    filter_switch = false
+                }else{
+                    filter_switch = true
+                }
+            case "filter-only-list":
+                if (filter_only_list === true){
+                    filter_only_list = false
+                }else{
+                    filter_only_list = true
+                }
         }
     }
 )
@@ -20,7 +28,7 @@ function DChecker(l){
 DChecker.prototype.Check = function (domain) {
     for (i in this.domain_list){
         let d = this.domain_list[i]
-        if (domain.indexOf(d) >= 0){
+        if (domain.indexOf(d) >= 0){ // 判断名单中的值是否是要检查的域名的一部分(或完全匹配)
             if( domain.indexOf(d) === domain.length-d.length){
                 return true
             }
@@ -29,9 +37,11 @@ DChecker.prototype.Check = function (domain) {
     return false
 }
 
-let wl = new DChecker([])
+let wl = new DChecker(["www.baidu.com"])
 
-let bl = new DChecker([])
+let bl = new DChecker(["cnzz.com","tagtic.cn","mmstat.com","anquan.org","baidu.com","baidustatic.com",
+"bdstatic.com","tanx.com","pstatp.com","google-analytics.com","googlesyndication.com",
+"googleadservices.com","doubleclick.net","growingio.com","dlads.cn"])
 
 // domain
 function Domain(str){
@@ -119,7 +129,7 @@ Domain.prototype.ContentType = function (type) {
 }
 
 //
-// listerner
+// listener
 //
 
 chrome.webRequest.onBeforeSendHeaders.addListener(
@@ -154,18 +164,17 @@ function js_blocker(detail, type){
         console.log("detail url is: "+detail.url)
         return
     }
-    // 检查黑名单和白名单
+    // 检查黑名单和白名单，先白名单
+    if (wl.Check(td.domain) == true){
+        console.log("wl:"+td.domain)
+        return
+    }
     if (bl.Check(td.domain) == true){
         console.log("bl:"+td.domain)
         return {cancel: true}
     }
 
-    if (wl.Check(td.domain) == true){
-        console.log("wl:"+td.domain)
-        return
-    }
-
-    // 获得cd
+    // 获得发起者域名
     let cd = new Domain(detail.initiator)
     if (cd.valid === false){
         let referer = ""
@@ -182,7 +191,7 @@ function js_blocker(detail, type){
             return
         }
 
-        // 根据refer检查请求发起者域名
+        // 根据referer检查请求发起者域名
         cd = new Domain(referer);
         if (cd.valid === false){
             console.log("referer is: "+referer)
@@ -199,6 +208,12 @@ function js_blocker(detail, type){
         return
     }
 
+    // switch only list 控制是否只检查黑白名单
+    if (filter_only_list === true){
+        return
+    }
+
+    // 是否进行母域名检查
     let ck = false
     if (type === "js"){
         if (td.ContentType("js") === true){
@@ -209,6 +224,7 @@ function js_blocker(detail, type){
         ck = true
     }
 
+    // check
     if (ck === true){
         if (cd.GetDomain() === td.GetDomain()){
             console.log("type: "+type)
