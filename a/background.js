@@ -128,6 +128,15 @@ Domain.prototype.ContentType = function (type) {
     return false
 }
 
+// 获得文件名(或path的最末尾的那个字符串)
+Domain.prototype.GetResourceName = function () {
+    let s = this.path.split("/")
+    if (s.length > 1){
+        return s[s.length-1]
+    }
+    return this.path
+}
+
 //
 // listener
 //
@@ -146,8 +155,6 @@ chrome.webRequest.onHeadersReceived.addListener(
     function (detail){
         if (filter_switch === true){
             if (detail.type === "script"){
-                console.log(detail.url)
-                console.log(detail.type)
                 return js_blocker(detail, "script")
             }
         }
@@ -161,19 +168,17 @@ function js_blocker(detail, type){
     // 检查目标域名
     let td = new Domain(detail.url)
     if (td.valid === false){
-        console.log("detail url is: "+detail.url)
+        console.log("not valid url: "+detail.url)
         return
     }
     // 检查黑名单和白名单，先白名单
     if (wl.Check(td.domain) == true){
-        console.log("wl:"+td.domain)
         return
     }
     if (bl.Check(td.domain) == true){
         console.log("bl:"+td.domain)
         return {cancel: true}
     }
-
     // 获得发起者域名
     let cd = new Domain(detail.initiator)
     if (cd.valid === false){
@@ -190,7 +195,6 @@ function js_blocker(detail, type){
             console.log(detail.requestHeaders)
             return
         }
-
         // 根据referer检查请求发起者域名
         cd = new Domain(referer);
         if (cd.valid === false){
@@ -201,18 +205,10 @@ function js_blocker(detail, type){
             return
         }
     }
-
     // 检查白名单，如果在则直接放行
     if (wl.Check(cd.domain) == true){
-        console.log("wl:"+cd.domain)
         return
     }
-
-    // switch only list 控制是否只检查黑白名单
-    if (filter_only_list === true){
-        return
-    }
-
     // 是否进行母域名检查
     let ck = false
     if (type === "js"){
@@ -220,23 +216,41 @@ function js_blocker(detail, type){
             ck = true
         }
     }
-    if (type === "script"){
+    if (type === "script"){ // script这个只有等请求到文件之后才知道
         ck = true
     }
-
-    // check
+    if (ck === true){
+    // ad_blocker 先和黑白名单放在一起
+        if (ad_blocker(td) === true){
+            console.log("ad_blocker: "+type+" "+td.url)
+            return {cancel: true}
+        }
+    }
+    // switch only list 控制是否只检查黑白名单
+    if (filter_only_list === true){
+        return
+    }
+    // 检查发起者和目标的域名是否相同
     if (ck === true){
         if (cd.GetDomain() === td.GetDomain()){
-            console.log("type: "+type)
-            console.log("pass: "+cd.url+"   "+td.url)
             return
         }
-        console.log("type: "+type)
-        console.log("block: "+td.url)
+        console.log("block: "+type+" "+td.url)
         return {cancel: true}
     }
-    console.log("type: "+type)
-    console.log("skip: "+td.url)
 }
 
-
+function ad_blocker(domain){
+    let n=domain.GetResourceName()
+    let ad="ads"
+    if (n.indexOf(ad) >= 0){
+        return true
+    }
+    let nn = n.split("_")
+    for (i in nn){
+        if (i === "ad"){
+            return true
+        }
+    }
+    return false
+}
