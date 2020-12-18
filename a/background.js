@@ -41,7 +41,7 @@ let wl = new DChecker(["www.baidu.com"])
 
 let bl = new DChecker(["cnzz.com","tagtic.cn","mmstat.com","anquan.org","baidu.com","baidustatic.com",
 "bdstatic.com","tanx.com","pstatp.com","google-analytics.com","googlesyndication.com",
-"googleadservices.com","doubleclick.net","growingio.com","dlads.cn"])
+"googleadservices.com","doubleclick.net","growingio.com","dlads.cn","ieeod0.com"])
 
 // domain
 function Domain(str){
